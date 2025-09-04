@@ -1,0 +1,217 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KISMAT KA DARWAJA - MAHAKAL</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#111; color:#fff; text-align:center; margin:0; padding:20px; }
+    h1 { color: gold; }
+    .input-area { margin:20px 0; }
+    input, button { padding:10px; font-size:16px; margin:5px; border-radius:5px; border:none; }
+    input { width:200px; }
+    button { cursor:pointer; background:gold; color:#111; font-weight:bold; }
+    .gates { display:flex; justify-content:center; gap:20px; margin:20px 0; }
+    .gate { width:100px; height:200px; border:4px solid #fff; border-radius:8px; position:relative; overflow:hidden; perspective:1000px; cursor:pointer; }
+    .gate .door { width:100%; height:100%; background:brown; transform-origin:left; transition:transform 5s; }
+    .gate.open .door { transform: rotateY(-120deg); }
+    .handle { width:20px; height:20px; border-radius:50%; background:gold; position:absolute; right:15px; top:90px; }
+    .result-text { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; font-weight:bold; color:#fff; display:none; }
+    .gate.open .result-text { display:block; }
+    .banner { font-size:28px; margin:20px 0; padding:15px; border-radius:10px; display:none; }
+    .banner.win { background:green; color:#fff; }
+    .banner.lose { background:red; color:#fff; }
+    #countdown { font-size:20px; margin-top:10px; }
+    #selectedGateBox { margin-top:10px; font-size:18px; }
+    #adminSection { display:none; margin-top:20px; }
+    table { margin:auto; border-collapse:collapse; }
+    th, td { border:1px solid #fff; padding:8px 15px; }
+    #adminLoginBtn { margin-top:30px; }
+    #deleteBtn { margin:10px; background:red; color:white; }
+  </style>
+</head>
+<body>
+  <h1>KISMAT KA DARWAJA - MAHAKAL</h1>
+
+  <div class="input-area">
+    <input type="text" id="mobile" placeholder="Enter Mobile Number">
+    <button onclick="submitNumber()">Submit</button>
+  </div>
+
+  <div id="countdown"></div>
+  <div id="selectedGateBox"></div>
+  <div class="banner" id="banner"></div>
+
+  <div class="gates" id="gates"></div>
+
+  <!-- Admin Login Button -->
+  <button id="adminLoginBtn" onclick="adminLogin()">Admin Login</button>
+
+  <!-- Admin Section -->
+  <div id="adminSection">
+    <h2>Admin Log</h2>
+    <button id="deleteBtn" onclick="deleteHistory()">Delete History</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Mobile</th>
+          <th>Gate</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody id="adminLog"></tbody>
+    </table>
+  </div>
+
+  <audio id="doorSound" src="https://www.soundjay.com/mechanical/sounds/door-creak-1.mp3"></audio>
+  <audio id="clapSound" src="https://www.soundjay.com/human/sounds/applause-8.mp3"></audio>
+
+  <script>
+    const gates = ["red","blue","green","yellow","purple"];
+    let users = JSON.parse(localStorage.getItem("users") || "{}");
+    let currentUser = null;
+
+    function saveUsers(){ localStorage.setItem("users", JSON.stringify(users)); }
+
+    function renderGates(){
+      const gatesDiv=document.getElementById("gates");
+      gatesDiv.innerHTML="";
+      gates.forEach((color,i)=>{
+        let gate=document.createElement("div");
+        gate.className="gate";
+        gate.innerHTML=`<div class="door" style="background:${color};"></div>
+                        <div class="handle"></div>
+                        <div class="result-text" id="result${i}"></div>`;
+        gate.onclick=()=>openGate(i);
+        gatesDiv.appendChild(gate);
+      });
+    }
+
+    function submitNumber(){
+      const mobile=document.getElementById("mobile").value.trim();
+      if(!mobile){alert("Please enter mobile number!");return;}
+      currentUser=mobile;
+
+      if(!users[currentUser]){
+        const prizeGate=Math.floor(Math.random()*gates.length);
+        users[currentUser]={chosenGate:null,lockTime:Date.now()+24*60*60*1000,prizeGate:prizeGate};
+        saveUsers();
+      }
+      startCountdown();
+    }
+
+    function startCountdown(){
+      const countdown=document.getElementById("countdown");
+      function update(){
+        if(!currentUser)return;
+        let user=users[currentUser];
+        let diff=user.lockTime-Date.now();
+        if(diff<=0){countdown.textContent="Time Expired";return;}
+        let hrs=Math.floor(diff/3600000);
+        let mins=Math.floor((diff%3600000)/60000);
+        let secs=Math.floor((diff%60000)/1000);
+        countdown.textContent="Lock expires in: "+hrs+"h "+mins+"m "+secs+"s";
+      }
+      update(); setInterval(update,1000);
+    }
+
+    function openGate(i){
+      if(!currentUser){alert("Submit mobile number first!");return;}
+      let user=users[currentUser];
+      if(Date.now()>user.lockTime){alert("24h lock expired.");return;}
+      if(user.chosenGate!==null){alert("You already opened a gate!");return;}
+
+      user.chosenGate=i;
+      const gate=document.getElementsByClassName("gate")[i];
+      gate.classList.add("open");
+
+      let result=(i===user.prizeGate)?"500 FREE BONUS POINTS":"OH! SORRY";
+      document.getElementById("result"+i).textContent=result;
+
+      document.getElementById("doorSound").play();
+      setTimeout(()=>{
+        if(result==="500 FREE BONUS POINTS"){
+          document.getElementById("clapSound").play();
+          showBanner("CONGRATULATIONS 🎉 APKA KISMAT KA DARWAJA KHUL GAYA","win");
+        }else{
+          showBanner("OH! SORRY 😔","lose");
+        }
+      },5000);
+
+      document.getElementById("selectedGateBox").textContent="You chose Gate: "+(i+1);
+      saveUsers();
+      updateAdminLog();
+    }
+
+    function showBanner(text,type){
+      const banner=document.getElementById("banner");
+      banner.textContent=text;
+      banner.className="banner "+type;
+      banner.style.display="block";
+    }
+
+    function updateAdminLog(){
+      let tbody=document.getElementById("adminLog");
+      tbody.innerHTML="";
+      Object.keys(users).forEach(num=>{
+        let u=users[num];
+        let row=document.createElement("tr");
+        row.innerHTML=`<td>${num}</td><td>${u.chosenGate!==null?u.chosenGate+1:"-"}</td><td>${u.chosenGate!==null?(u.chosenGate===u.prizeGate?"500 FREE BONUS POINTS":"OH! SORRY"):"-"}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    // SHA-256 Function
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    // Admin Login Password (vipin@2025)
+    const storedHash = "9e0c3fa80cf3af0356aefaedd5bcbaae6243a9968699b5ca620e4c4d88b7f8c1";
+
+    // Delete History Password (vipinvidhyanshi@251802) — CORRECT HASH
+    const deleteHash = "6a76a454c80ff899b749a1cfb5f12033dcf81b4c8a149afec3b7ce938ae7cb12";
+
+    // 🗑️ Delete history with separate password (trimmed input)
+    async function deleteHistory(){
+      let pass = prompt("Enter Delete History Password:");
+      if(pass === null) return;
+      pass = pass.trim();
+      let enteredHash = await sha256(pass);
+      if(enteredHash === deleteHash){
+        if(confirm("Are you sure you want to delete all history?")){
+          users = {};
+          saveUsers();
+          updateAdminLog();
+          alert("History deleted!");
+          // Log entry (visual note)
+          let tbody=document.getElementById("adminLog");
+          let row=document.createElement("tr");
+          row.innerHTML=`<td colspan="3" style="color:red;">All History Cleared by Admin</td>`;
+          tbody.appendChild(row);
+        }
+      } else {
+        alert("❌ Wrong Delete Password!");
+      }
+    }
+
+    // 🔐 Admin login (trimmed input)
+    async function adminLogin(){
+      let pass = prompt("Enter Admin Password:");
+      if(pass === null) return;
+      pass = pass.trim();
+      let enteredHash = await sha256(pass);
+      if(enteredHash === storedHash){
+        document.getElementById("adminSection").style.display="block";
+        updateAdminLog();
+      }else{
+        alert("Wrong Password!");
+      }
+    }
+
+    renderGates();
+  </script>
+</body>
+</html>
