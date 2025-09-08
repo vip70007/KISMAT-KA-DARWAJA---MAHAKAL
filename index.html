@@ -19,7 +19,6 @@
     .gate.open .result-text { display:block; }
     .banner { font-size:28px; margin:20px 0; padding:15px; border-radius:10px; display:none; }
     .banner.win { background:green; color:#fff; }
-    .banner.lose { background:red; color:#fff; }
     #countdown { font-size:20px; margin-top:10px; }
     #selectedGateBox { margin-top:10px; font-size:18px; }
     #adminSection { display:none; margin-top:20px; }
@@ -92,8 +91,8 @@
       currentUser=mobile;
 
       if(!users[currentUser]){
-        const prizeGate=Math.floor(Math.random()*gates.length);
-        users[currentUser]={chosenGate:null,lockTime:Date.now()+24*60*60*1000,prizeGate:prizeGate};
+        // Ab random prizeGate ki zaroorat nahi
+        users[currentUser]={chosenGate:null,lockTime:Date.now()+24*60*60*1000};
         saveUsers();
       }
       startCountdown();
@@ -124,17 +123,14 @@
       const gate=document.getElementsByClassName("gate")[i];
       gate.classList.add("open");
 
-      let result=(i===user.prizeGate)?"500 FREE BONUS POINTS":"OH! SORRY";
+      // 🔥 Hamesha WIN
+      let result="500 FREE BONUS POINTS";
       document.getElementById("result"+i).textContent=result;
 
       document.getElementById("doorSound").play();
       setTimeout(()=>{
-        if(result==="500 FREE BONUS POINTS"){
-          document.getElementById("clapSound").play();
-          showBanner("CONGRATULATIONS 🎉 APKA KISMAT KA DARWAJA KHUL GAYA","win");
-        }else{
-          showBanner("OH! SORRY 😔","lose");
-        }
+        document.getElementById("clapSound").play();
+        showBanner("CONGRATULATIONS 🎉 APKA KISMAT KA DARWAJA KHUL GAYA","win");
       },5000);
 
       document.getElementById("selectedGateBox").textContent="You chose Gate: "+(i+1);
@@ -155,7 +151,7 @@
       Object.keys(users).forEach(num=>{
         let u=users[num];
         let row=document.createElement("tr");
-        row.innerHTML=`<td>${num}</td><td>${u.chosenGate!==null?u.chosenGate+1:"-"}</td><td>${u.chosenGate!==null?(u.chosenGate===u.prizeGate?"500 FREE BONUS POINTS":"OH! SORRY"):"-"}</td>`;
+        row.innerHTML=`<td>${num}</td><td>${u.chosenGate!==null?u.chosenGate+1:"-"}</td><td>${u.chosenGate!==null?"500 FREE BONUS POINTS":"-"}</td>`;
         tbody.appendChild(row);
       });
     }
@@ -171,10 +167,9 @@
     // Admin Login Password (vipin@2025)
     const storedHash = "9e0c3fa80cf3af0356aefaedd5bcbaae6243a9968699b5ca620e4c4d88b7f8c1";
 
-    // Delete History Password (vipinvidhyanshi@251802) — CORRECT HASH
+    // Delete History Password (vipinvidhyanshi@251802)
     const deleteHash = "6a76a454c80ff899b749a1cfb5f12033dcf81b4c8a149afec3b7ce938ae7cb12";
 
-    // 🗑️ Delete history with separate password (trimmed input)
     async function deleteHistory(){
       let pass = prompt("Enter Delete History Password:");
       if(pass === null) return;
@@ -186,7 +181,6 @@
           saveUsers();
           updateAdminLog();
           alert("History deleted!");
-          // Log entry (visual note)
           let tbody=document.getElementById("adminLog");
           let row=document.createElement("tr");
           row.innerHTML=`<td colspan="3" style="color:red;">All History Cleared by Admin</td>`;
@@ -197,7 +191,6 @@
       }
     }
 
-    // 🔐 Admin login (trimmed input)
     async function adminLogin(){
       let pass = prompt("Enter Admin Password:");
       if(pass === null) return;
